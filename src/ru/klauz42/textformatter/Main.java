@@ -1,7 +1,5 @@
 package ru.klauz42.textformatter;
 
-import com.sun.xml.internal.ws.util.StringUtils;
-
 import java.io.*;
 import java.util.*;
 
@@ -9,9 +7,8 @@ public class Main {
     public static void main(String[] args) {
         String path = "/home/claus/testdir/testfull.txt";
         try {
-            ArrayList<String> arrayList = fileToList(path);
             String string;
-            string = alignText(50, arrayList);
+            string = alignText(50, path);
             System.out.println(string);
         }
         catch (Exception e){
@@ -21,57 +18,70 @@ public class Main {
 
     }
 
-    static String alignText(int n, ArrayList<String> words){
+    static String alignText(int n, String path) throws IOException{
+        ArrayList<String> words = fileToList(path);
         StringBuilder text = new StringBuilder();
-        int lettersInString = 0;
-        int singleSpacesInString = 0;
-        int spacesInString = 0;
-        int unusedCharsInString = 0;
-        int charsPerSpace = 0;
-        int extraSpaces = 0;
+        int lettersInLine;        //количество символов в строке без пробелов
+        int spacesInLine;        //сколько промежутков между строк
+        int unusedCharsInLine;    //оставшиеся символы, когда новое слово уже не влезет
+        int charsPerSpace;          //сколько символов на один пробел
+        int extraSpaces;            //сколько слов
 
-        int i = 0; //counter
-        boolean isStringCompleted = false;
+        int i = 0; //счетчик слов в тексте
+        boolean isLineCompleted = false;
         boolean isTextCompleted = false;
         ArrayList<String> wordsInString = null;
 
         while (!isTextCompleted)
         {
             wordsInString = new ArrayList<>();
-            isStringCompleted = false;
-            singleSpacesInString = 0;
-            lettersInString = 0;
-            unusedCharsInString = 0;
+            isLineCompleted = false;
+            spacesInLine = 0;
+            lettersInLine = 0;
+            unusedCharsInLine = 0;
             charsPerSpace = 0;
             extraSpaces = 0;
-            singleSpacesInString = 0;
+            spacesInLine = 0;
 
-            while (!isStringCompleted){
-                if(lettersInString == 0) {
-                    lettersInString += words.get(i).length();
-                    if (lettersInString < n) {
+            while (!isLineCompleted){
+                //первое слово, без пробела в начале
+                if(lettersInLine == 0) {
+                    lettersInLine += words.get(i).length();
+                    if (lettersInLine < n) {
                         wordsInString.add(words.get(i));
                         i++;
                     }
                     else {                                    //task: обработать отдельно, когда ни слова не помещается, сейчас просто вставляем
                         text.append(words.get(i) + "\n");
                         i++;
-                        isStringCompleted = true;
+                        isLineCompleted = true;
                         break;
                     }
                 }
+                //слова после первого
                 else {
-                    singleSpacesInString++;
-                    if((singleSpacesInString + lettersInString + words.get(i).length()) < n){
-                        lettersInString += words.get(i).length();
+                    //проверка, уместится следующее слово в строку
+                    //дополнитей пробел учитывается, т.к. строгое неравенство
+                    if((spacesInLine + lettersInLine + words.get(i).length()) < n){
+                        lettersInLine += words.get(i).length();
                         wordsInString.add(words.get(i));
-                        if(i + 1 == words.size()) continue;
-                        else i++;
+                        //проверка, есть еще слова в листе
+                        //и дополняем еще одним пробелом, для последней строчки
+                        if(i + 1 == words.size()) {
+                            spacesInLine++;
+                            continue;
+                        }
+
+                        else {
+                            i++;
+                            spacesInLine++;
+                        }
                     }
                     else { //раскидываем пробелы
-                        unusedCharsInString = n - lettersInString;
-                        extraSpaces = unusedCharsInString % singleSpacesInString;
-                        charsPerSpace = unusedCharsInString / singleSpacesInString;
+                        //spacesInLine--;//crutchy
+                        unusedCharsInLine = n - lettersInLine;
+                        extraSpaces = unusedCharsInLine % spacesInLine;
+                        charsPerSpace = unusedCharsInLine / spacesInLine;
                         StringBuilder bigSpace = new StringBuilder();
                         for (int j = 0; j < charsPerSpace; j++){
                             bigSpace.append(" ");
@@ -80,11 +90,11 @@ public class Main {
                         for (int j = 0; j < extraSpaces ; j++){
                             text.append(wordsInString.get(j) + bigSpace + " ");
                         }
-                        for (int j = extraSpaces; j < singleSpacesInString - 1; j++){
+                        for (int j = extraSpaces; j < spacesInLine; j++){
                             text.append(wordsInString.get(j) + bigSpace);
                         }
                         text.append(wordsInString.get(wordsInString.size() - 1) + "\n");
-                        isStringCompleted = true;
+                        isLineCompleted = true;
                     }
                 }
             }
